@@ -1,0 +1,844 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Time-Share Bank</title>
+<style>
+  :root{
+    --bg:#0f1b18;            /* 앱 바깥 배경 */
+    --surface:#f7f5ef;       /* 화면 종이색 */
+    --ink:#1c2622;           /* 본문 */
+    --muted:#6b7a73;         /* 보조 텍스트 */
+    --primary:#1f8a6d;       /* 시간/공동체 그린 */
+    --primary-dark:#16654f;
+    --accent:#e0a536;        /* 시간(해/시계) 골드 */
+    --danger:#c0533b;
+    --line:#e2ded2;
+    --card:#ffffff;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Apple SD Gothic Neo","Malgun Gothic",sans-serif;
+    background:radial-gradient(circle at 50% 0%,#1c3329,#0f1b18);
+    min-height:100vh;display:flex;align-items:center;justify-content:center;
+    color:var(--ink);padding:16px;
+  }
+  .phone{
+    width:100%;max-width:412px;height:min(860px,94vh);
+    background:var(--surface);border-radius:30px;overflow:hidden;
+    box-shadow:0 30px 70px rgba(0,0,0,.5);display:flex;flex-direction:column;position:relative;
+  }
+  /* 상단 앱바 */
+  .appbar{
+    background:var(--primary);color:#fff;padding:18px 18px 16px;
+    display:flex;align-items:center;gap:10px;flex-shrink:0;
+  }
+  .appbar .back{
+    background:rgba(255,255,255,.18);border:none;color:#fff;width:32px;height:32px;
+    border-radius:50%;font-size:18px;cursor:pointer;line-height:1;display:none;
+  }
+  .appbar.has-back .back{display:block}
+  .appbar h1{font-size:17px;font-weight:700;letter-spacing:-.3px}
+  .appbar .who{margin-left:auto;font-size:12px;opacity:.85}
+  /* 화면 영역 */
+  .body{flex:1;overflow-y:auto;padding:22px 20px 30px}
+  .screen{display:none;animation:fade .25s ease}
+  .screen.active{display:block}
+  @keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+
+  .brand{text-align:center;margin:14px 0 26px}
+  .brand .clock{font-size:46px}
+  .brand h2{font-size:26px;font-weight:800;letter-spacing:-.5px;margin-top:6px}
+  .brand p{color:var(--muted);font-size:13px;margin-top:6px}
+
+  label{display:block;font-size:12.5px;color:var(--muted);font-weight:600;margin:14px 2px 6px}
+  input,select,textarea{
+    width:100%;padding:13px 14px;border:1.5px solid var(--line);border-radius:12px;
+    font-size:15px;background:var(--card);color:var(--ink);font-family:inherit;
+  }
+  input:focus,select:focus,textarea:focus{outline:none;border-color:var(--primary)}
+  textarea{resize:vertical;min-height:80px}
+
+  .btn{
+    width:100%;padding:14px;border:none;border-radius:12px;font-size:15.5px;font-weight:700;
+    cursor:pointer;margin-top:18px;font-family:inherit;transition:transform .05s, filter .15s;
+  }
+  .btn:active{transform:scale(.99)}
+  .btn-primary{background:var(--primary);color:#fff}
+  .btn-primary:hover{filter:brightness(1.05)}
+  .btn-ghost{background:transparent;color:var(--primary);border:1.5px solid var(--primary);margin-top:10px}
+  .btn-danger{background:var(--danger);color:#fff}
+  .btn-sm{width:auto;padding:8px 14px;margin:0;font-size:13px;border-radius:9px}
+
+  .link{display:block;text-align:center;margin-top:18px;color:var(--muted);font-size:13.5px;cursor:pointer}
+  .link b{color:var(--primary)}
+
+  /* 포인트 배너 */
+  .balance{
+    background:linear-gradient(135deg,var(--primary),var(--primary-dark));
+    color:#fff;border-radius:18px;padding:20px;margin-bottom:20px;position:relative;overflow:hidden;
+  }
+  .balance::after{content:"⏱";position:absolute;right:-6px;bottom:-14px;font-size:90px;opacity:.13}
+  .balance .lab{font-size:12px;opacity:.85;letter-spacing:.4px}
+  .balance .val{font-size:34px;font-weight:800;margin-top:4px}
+  .balance .sub{font-size:12.5px;opacity:.8;margin-top:2px}
+
+  /* 메뉴 그리드 */
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .tile{
+    background:var(--card);border:1.5px solid var(--line);border-radius:16px;padding:18px 14px;
+    cursor:pointer;text-align:left;transition:border-color .15s, transform .05s;
+  }
+  .tile:hover{border-color:var(--primary)}
+  .tile:active{transform:scale(.98)}
+  .tile .ico{font-size:24px}
+  .tile .t{font-weight:700;font-size:14.5px;margin-top:10px}
+  .tile .d{font-size:11.5px;color:var(--muted);margin-top:3px}
+
+  /* 리스트 카드 */
+  .card{
+    background:var(--card);border:1.5px solid var(--line);border-radius:14px;padding:15px;margin-bottom:11px;
+  }
+  .card .tag{
+    display:inline-block;font-size:11px;font-weight:700;padding:3px 9px;border-radius:20px;margin-bottom:8px;
+  }
+  .tag.help{background:#fbe9e3;color:var(--danger)}
+  .tag.give{background:#dff0e9;color:var(--primary-dark)}
+  .card h3{font-size:15px;font-weight:700}
+  .card .meta{font-size:12px;color:var(--muted);margin-top:4px}
+  .card .desc{font-size:13px;color:#3d4b44;margin-top:8px;line-height:1.5}
+  .card .row{display:flex;align-items:center;gap:8px;margin-top:12px}
+  .card .dist{font-size:12px;font-weight:700;color:var(--accent)}
+
+  .empty{text-align:center;color:var(--muted);padding:40px 10px;font-size:14px}
+  .section-title{font-size:13px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin:6px 2px 12px}
+
+  .toast{
+    position:absolute;left:50%;bottom:26px;transform:translateX(-50%) translateY(20px);
+    background:var(--ink);color:#fff;padding:12px 20px;border-radius:30px;font-size:13.5px;font-weight:600;
+    opacity:0;transition:.3s;pointer-events:none;max-width:90%;text-align:center;z-index:50;
+  }
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+  .note{font-size:12px;color:var(--muted);background:#efece3;border-radius:10px;padding:11px 13px;margin-top:14px;line-height:1.5}
+  .avatar{width:38px;height:38px;border-radius:50%;background:var(--primary);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:15px;flex-shrink:0}
+</style>
+</head>
+<body>
+<div class="phone">
+  <div class="appbar" id="appbar">
+    <button class="back" onclick="App.back()">‹</button>
+    <h1 id="appTitle">Time-Share Bank</h1>
+    <span class="who" id="appWho"></span>
+  </div>
+  <div class="body" id="appBody"></div>
+  <div class="toast" id="toast"></div>
+</div>
+
+<script>
+/* =========================================================================
+   Time-Share Bank — 설계(Class Diagram) 기반 구현
+   순수 JavaScript OOP. 서버 없이 브라우저 안에서 동작하며,
+   데이터는 localStorage 에 저장된다.
+   ========================================================================= */
+
+/* ---------- model: TimePoint ---------- */
+class TimePoint {
+  constructor(ownerID, balance){ this.ownerID = ownerID; this.balance = balance; }
+  showBalance(){ return this.balance; }
+  earn(amount){ this.balance += amount; }
+  spend(amount){ if(this.balance < amount) return false; this.balance -= amount; return true; }
+}
+
+/* ---------- model: Location (GPS + 거리 계산) ---------- */
+class Loc {
+  constructor(lat, lng, regionName){ this.latitude = lat; this.longitude = lng; this.regionName = regionName; }
+  setRegion(name){ this.regionName = name; }
+  // Haversine: 두 지점 거리(km)
+  getDistance(t){
+    const R = 6371, toRad = d => d*Math.PI/180;
+    const dLat = toRad(t.latitude - this.latitude), dLon = toRad(t.longitude - this.longitude);
+    const a = Math.sin(dLat/2)**2 + Math.cos(toRad(this.latitude))*Math.cos(toRad(t.latitude))*Math.sin(dLon/2)**2;
+    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+  }
+}
+
+/* ---------- model: Member (부모) ---------- */
+class Member {
+  constructor(name, userID, password, tel, email, role){
+    this.name=name; this.userID=userID; this.password=password;
+    this.tel=tel; this.email=email; this.role=role; // 0:사용자 1:관리자
+  }
+  getUserID(){ return this.userID; }
+  getRole(){ return this.role; }
+}
+
+/* ---------- model: User (Member 상속) ---------- */
+class User extends Member {
+  constructor(name, userID, password, tel, email){
+    super(name, userID, password, tel, email, 0);
+    this.point = new TimePoint(userID, 0);
+    this.regionName = null;
+    this.location = null;
+  }
+  registerLocation(lat, lng, regionName){
+    this.location = new Loc(lat, lng, regionName);
+    this.regionName = regionName;
+  }
+  showPoint(){ return this.point.showBalance(); }
+  writePost(type, title, content, requiredTime, category, urgency, points){
+    const repo = Repo.get();
+    const post = new Post(repo.nextPostNo(), this.userID, type, title, content, requiredTime, this.regionName || "미등록", category, urgency, points);
+    repo.addPost(post);
+    return post;
+  }
+  searchPost(region){ return Repo.get().searchPostsByRegion(region); }
+}
+
+/* ---------- model: Administrator (Member 상속) ---------- */
+class Administrator extends Member {
+  constructor(name, userID, password, tel, email){ super(name, userID, password, tel, email, 1); }
+  deleteUser(userID){ Repo.get().removeMember(userID); }
+  managePost(postNo){ Repo.get().removePost(postNo); }
+  showUserList(){ return Repo.get().getMembers(); }
+  // 신고 처리: 'done'이면 대상 게시글 제재(삭제) 후 처리완료, 'reject'면 반려
+  handleReport(reportNo, action){
+    const repo = Repo.get();
+    const r = repo.findReport(reportNo);
+    if(!r) return;
+    if(action==='done'){ if(r.targetType==='post') this.managePost(r.targetID); r.status='처리완료'; }
+    else r.status='반려';
+    repo.save();
+  }
+}
+
+/* ---------- model: Post ---------- */
+class Post {
+  constructor(postNo, writerID, type, title, content, requiredTime, regionName, category, urgency, points){
+    this.postNo=postNo; this.writerID=writerID; this.type=type; // 0:도움요청 1:재능제공
+    this.title=title; this.content=content; this.requiredTime=requiredTime; this.regionName=regionName;
+    this.category=category||"기타";
+    this.urgency=urgency||0;          // 0:낮음 1:보통 2:긴급
+    this.points=(points!=null)?points:requiredTime; // 제안 포인트(분). 미지정 시 소요시간 기준
+  }
+}
+
+/* ---------- model: Report (신고) ---------- */
+class Report {
+  constructor(reportNo, reporterID, targetType, targetID, category, content){
+    this.reportNo=reportNo; this.reporterID=reporterID;
+    this.targetType=targetType; // 'post' | 'user'
+    this.targetID=targetID; this.category=category; this.content=content;
+    this.status='접수'; // 접수 | 처리완료 | 반려
+  }
+}
+
+/* ---------- model: Matching ---------- */
+class Matching {
+  constructor(receiverID, postNo){
+    this.matchingNo = Repo.get().nextMatchNo();
+    this.receiverID = receiverID; this.postNo = postNo;
+    this.providerID = null; this.accepted = false;
+  }
+  // me 기준 radiusKm 이내 사용자를 가까운 순으로
+  static findNearbyUser(me, radiusKm){
+    const out = [];
+    if(!me.location) return out;
+    for(const m of Repo.get().getMembers()){
+      if(m.role !== 0 || m.userID === me.userID || !m.location) continue;
+      const d = me.location.getDistance(m.location);
+      if(d <= radiusKm) out.push(m);
+    }
+    out.sort((a,b)=> me.location.getDistance(a.location) - me.location.getDistance(b.location));
+    return out;
+  }
+}
+
+/* ---------- model: Transaction (정산 + GPS 검증) ---------- */
+class Transaction {
+  constructor(providerID, receiverID, amount){
+    this.transactionNo = Repo.get().nextTxNo();
+    this.providerID=providerID; this.receiverID=receiverID; this.amount=amount; this.isVerified=false;
+  }
+  verifyGPS(){
+    const repo = Repo.get();
+    const p = repo.findByUserID(this.providerID), r = repo.findByUserID(this.receiverID);
+    if(p && r && p.location && r.location){
+      this.isVerified = p.location.getDistance(r.location) <= 1.0; // 1km 이내
+      return this.isVerified;
+    }
+    this.isVerified = false; return false;
+  }
+  confirmComplete(){
+    if(!this.verifyGPS()) return {ok:false, reason:"GPS 검증 실패 (부정 거래 의심)"};
+    const repo = Repo.get();
+    const receiver = repo.findByUserID(this.receiverID), provider = repo.findByUserID(this.providerID);
+    if(!receiver.point.spend(this.amount)) return {ok:false, reason:"포인트 잔액이 부족합니다"};
+    provider.point.earn(this.amount);
+    repo.addTransaction(this); repo.save();
+    return {ok:true};
+  }
+}
+
+/* ---------- service: Registration ---------- */
+class Registration {
+  constructor(name, userID, password, tel, email){
+    Object.assign(this, {name, userID, password, tel, email});
+  }
+  hasID(id){ return Repo.get().hasID(id); }
+  addMember(){
+    if(this.hasID(this.userID)) return false;
+    const user = new User(this.name, this.userID, this.password, this.tel, this.email);
+    user.point.earn(120); // 가입 환영 포인트 (2시간) — 바로 정산 체험 가능
+    Repo.get().addMember(user);
+    Repo.get().save();
+    return true;
+  }
+}
+
+/* ---------- service: Login ---------- */
+class Login {
+  loginCheck(userID, password){
+    const m = Repo.get().findByUserID(userID);
+    if(m && m.password === password){ this.current = m; return true; }
+    return false;
+  }
+  isUser(){ return this.current && this.current.role === 0; }
+  isAdministrator(){ return this.current && this.current.role === 1; }
+}
+
+/* ---------- data: Repository (싱글톤 + localStorage) ---------- */
+class Repository {
+  constructor(){ this.members=[]; this.posts=[]; this.transactions=[]; this.reports=[]; this.postSeq=0; this.txSeq=0; this.matchSeq=0; this.reportSeq=0; }
+  static get(){ if(!Repository._i){ Repository._i = new Repository(); Repository._i.load(); } return Repository._i; }
+
+  addMember(m){ this.members.push(m); }
+  findByUserID(id){ return this.members.find(m=>m.userID===id) || null; }
+  hasID(id){ return !!this.findByUserID(id); }
+  getMembers(){ return this.members; }
+  removeMember(id){ this.members = this.members.filter(m=>m.userID!==id); this.save(); }
+
+  nextPostNo(){ return ++this.postSeq; }
+  addPost(p){ this.posts.push(p); }
+  getPosts(){ return this.posts; }
+  searchPostsByRegion(region){ return this.posts.filter(p=> !region || p.regionName===region); }
+  findPost(no){ return this.posts.find(p=>p.postNo===no) || null; }
+  removePost(no){ this.posts = this.posts.filter(p=>p.postNo!==no); this.save(); }
+
+  nextTxNo(){ return ++this.txSeq; }
+  nextMatchNo(){ return ++this.matchSeq; }
+  addTransaction(t){ this.transactions.push(t); }
+  getTransactions(){ return this.transactions; }
+
+  nextReportNo(){ return ++this.reportSeq; }
+  addReport(r){ this.reports.push(r); this.save(); }
+  getReports(){ return this.reports; }
+  findReport(no){ return this.reports.find(r=>r.reportNo===no) || null; }
+
+  /* ---- 영속화 ---- */
+  save(){
+    try{
+      const data = {
+        postSeq:this.postSeq, txSeq:this.txSeq, matchSeq:this.matchSeq, reportSeq:this.reportSeq,
+        members:this.members.map(m=>({
+          name:m.name,userID:m.userID,password:m.password,tel:m.tel,email:m.email,role:m.role,
+          balance:m.point?m.point.balance:0, regionName:m.regionName||null,
+          lat:m.location?m.location.latitude:null, lng:m.location?m.location.longitude:null
+        })),
+        posts:this.posts.map(p=>({...p})),
+        reports:this.reports.map(r=>({...r})),
+        transactions:this.transactions.map(t=>({transactionNo:t.transactionNo,providerID:t.providerID,receiverID:t.receiverID,amount:t.amount,isVerified:t.isVerified}))
+      };
+      localStorage.setItem("tsb_data", JSON.stringify(data));
+    }catch(e){ /* localStorage 불가 시 메모리로만 동작 */ }
+  }
+  load(){
+    let data=null;
+    try{ data = JSON.parse(localStorage.getItem("tsb_data")); }catch(e){}
+    if(!data){ this.seed(); return; }
+    this.postSeq=data.postSeq; this.txSeq=data.txSeq; this.matchSeq=data.matchSeq; this.reportSeq=data.reportSeq||0;
+    this.members = data.members.map(d=>{
+      let m;
+      if(d.role===1) m = new Administrator(d.name,d.userID,d.password,d.tel,d.email);
+      else { m = new User(d.name,d.userID,d.password,d.tel,d.email); m.point.balance=d.balance;
+             if(d.lat!=null){ m.registerLocation(d.lat,d.lng,d.regionName); } }
+      return m;
+    });
+    this.posts = data.posts.map(p=> new Post(p.postNo,p.writerID,p.type,p.title,p.content,p.requiredTime,p.regionName,p.category,p.urgency,p.points));
+    this.reports = (data.reports||[]).map(r=>{ const o=new Report(r.reportNo,r.reporterID,r.targetType,r.targetID,r.category,r.content); o.status=r.status; return o; });
+    this.transactions = data.transactions || []; // 거래 내역(읽기용 데이터)
+  }
+  reset(){ try{ localStorage.removeItem("tsb_data"); }catch(e){} Repository._i=null; }
+
+  /* ---- 초기 시드 데이터 ---- */
+  seed(){
+    const admin = new Administrator("관리자","admin","admin","010-0000-0000","admin@tsb.com");
+    this.addMember(admin);
+    const u1 = new User("김호현","user1","1234","010-1111-1111","u1@tsb.com");
+    u1.registerLocation(35.8714,128.6014,"대구 중구"); u1.point.earn(120); this.addMember(u1);
+    const u2 = new User("이웃A","user2","1234","010-2222-2222","u2@tsb.com");
+    u2.registerLocation(35.8720,128.6020,"대구 중구"); u2.point.earn(60); this.addMember(u2);
+    const u3 = new User("이웃B","user3","1234","010-3333-3333","u3@tsb.com");
+    u3.registerLocation(35.8702,128.5990,"대구 중구"); u3.point.earn(30); this.addMember(u3);
+    this.addPost(new Post(this.nextPostNo(),"user2",0,"무거운 짐 옮기기 도와주실 분","3층까지 이사 박스 5개 옮기는 것 도와주세요. 30분이면 충분합니다.",60,"대구 중구","이사·운반",2,60));
+    this.addPost(new Post(this.nextPostNo(),"user3",1,"엑셀 함수 알려드려요","간단한 엑셀 수식/그래프 만들기 알려드립니다. 노트북만 가져오세요.",60,"대구 중구","디지털·IT",0,60));
+    this.addPost(new Post(this.nextPostNo(),"user2",0,"강아지 산책 함께해요","오후에 30분 정도 강아지 산책 같이 가주실 분 찾아요.",30,"대구 중구","반려동물",1,30));
+    this.save();
+  }
+}
+const Repo = Repository;
+
+/* 공통 상수: 카테고리 / 긴급도 */
+const CATEGORIES = ['집안일','이사·운반','학습·튜터링','디지털·IT','반려동물','기타'];
+const URGENCY = ['낮음','보통','긴급'];
+const URGENCY_COLOR = ['#6b7a73','#e0a536','#c0533b']; // 회색·앰버·빨강
+function urgencyBadge(level){
+  return `<span style="display:inline-block;font-size:11px;font-weight:700;padding:3px 9px;border-radius:20px;color:#fff;background:${URGENCY_COLOR[level]||URGENCY_COLOR[0]}">긴급도 ${URGENCY[level]||'낮음'}</span>`;
+}
+
+/* =========================================================================
+   App — 화면 라우팅 + 이벤트
+   ========================================================================= */
+const App = {
+  login: new Login(),
+  history: [],
+  go(screen, push=true){
+    if(push && this.current) this.history.push(this.current);
+    this.current = screen;
+    render[screen]();
+    document.getElementById("appBody").scrollTop = 0;
+    const bar = document.getElementById("appbar");
+    bar.classList.toggle("has-back", this.history.length>0 && screen!=="menu" && screen!=="admin");
+  },
+  back(){ const prev = this.history.pop(); if(prev){ this.current=prev; render[prev](); 
+    const bar=document.getElementById("appbar");
+    bar.classList.toggle("has-back", this.history.length>0 && prev!=="menu" && prev!=="admin"); } },
+  reset(){ this.history=[]; },
+  setBar(title, who){ document.getElementById("appTitle").textContent=title; document.getElementById("appWho").textContent=who||""; },
+  me(){ return this.login.current; },
+  logout(){ this.login.current=null; this.reset(); this.go("login", false);
+    document.getElementById("appbar").classList.remove("has-back"); },
+};
+
+function $(id){ return document.getElementById(id); }
+function val(id){ return $(id).value.trim(); }
+function toast(msg){ const t=$("toast"); t.textContent=msg; t.classList.add("show"); clearTimeout(t._t); t._t=setTimeout(()=>t.classList.remove("show"),2200); }
+function esc(s){ return (s||"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])); }
+function body(html){ $("appBody").innerHTML = html; }
+
+/* ---------------- 화면들 ---------------- */
+const render = {
+
+  login(){
+    App.setBar("Time-Share Bank","");
+    body(`
+      <div class="brand">
+        <div class="clock">⏳</div>
+        <h2>Time-Share Bank</h2>
+        <p>돈이 아닌 '시간'으로 이웃과 재능을 나누는 곳</p>
+      </div>
+      <label>아이디 (Email)</label>
+      <input id="loginId" placeholder="user1" autocomplete="off">
+      <label>비밀번호</label>
+      <input id="loginPw" type="password" placeholder="1234">
+      <button class="btn btn-primary" onclick="App.doLogin()">로그인</button>
+      <div class="link" onclick="App.go('signup')">계정이 없으신가요? <b>회원가입</b></div>
+      <div class="note">체험용 계정 · 사용자: <b>user1 / 1234</b> · 관리자: <b>admin / admin</b></div>
+    `);
+  },
+
+  signup(){
+    App.setBar("회원가입","");
+    body(`
+      <label>이름</label><input id="suName" placeholder="홍길동">
+      <label>아이디 (Email)</label><input id="suId" placeholder="hong@tsb.com">
+      <label>비밀번호</label><input id="suPw" type="password" placeholder="비밀번호">
+      <label>전화번호</label><input id="suTel" placeholder="010-1234-5678">
+      <button class="btn btn-primary" onclick="App.doSignup()">가입하기</button>
+      <div class="link" onclick="App.back()">이미 계정이 있으신가요? <b>로그인</b></div>
+    `);
+  },
+
+  menu(){
+    const me = App.me();
+    App.setBar("홈", me.name+"님");
+    const h = Math.floor(me.showPoint()/60), m = me.showPoint()%60;
+    body(`
+      <div class="balance">
+        <div class="lab">보유 시간 포인트</div>
+        <div class="val">${h}시간 ${m}분</div>
+        <div class="sub">📍 ${esc(me.regionName||"지역 미등록")}</div>
+      </div>
+      <div class="grid">
+        <div class="tile" onclick="App.go('region')"><div class="ico">📍</div><div class="t">지역 등록</div><div class="d">GPS로 내 동네 설정</div></div>
+        <div class="tile" onclick="App.go('write')"><div class="ico">✍️</div><div class="t">게시글 작성</div><div class="d">재능·도움 올리기</div></div>
+        <div class="tile" onclick="App.go('browse')"><div class="ico">🔍</div><div class="t">게시글 탐색</div><div class="d">우리 동네 글 보기</div></div>
+        <div class="tile" onclick="App.go('matching')"><div class="ico">🤝</div><div class="t">실시간 매칭</div><div class="d">가까운 이웃 찾기</div></div>
+        <div class="tile" onclick="App.go('settle')"><div class="ico">⏱️</div><div class="t">포인트 정산</div><div class="d">서비스 완료 확인</div></div>
+        <div class="tile" onclick="App.logout()"><div class="ico">🚪</div><div class="t">로그아웃</div><div class="d">세션 종료</div></div>
+      </div>
+    `);
+  },
+
+  region(){
+    const me = App.me();
+    App.setBar("지역 등록","");
+    body(`
+      <p class="section-title">내 활동 지역</p>
+      <div class="card">
+        <div class="meta">현재 등록된 지역</div>
+        <h3 id="curRegion">📍 ${esc(me.regionName || "미등록")}</h3>
+        <div class="meta" id="curCoord">${me.location?`위도 ${me.location.latitude.toFixed(4)}, 경도 ${me.location.longitude.toFixed(4)}`:"좌표 없음"}</div>
+      </div>
+      <button class="btn btn-primary" onclick="App.useGPS()">📡 GPS로 현재 위치 가져오기</button>
+      <label>지역 이름 (직접 입력)</label>
+      <input id="regName" placeholder="예) 대구 중구" value="${esc(me.regionName||'')}">
+      <button class="btn btn-ghost" onclick="App.saveRegionManual()">이 위치로 설정 완료</button>
+      <div class="note">GPS는 https(GitHub Pages 등)에서 동작합니다. 로컬 파일로 열면 권한이 막힐 수 있어, 그럴 땐 지역 이름 입력으로 등록하세요.</div>
+    `);
+  },
+
+  write(){
+    App.setBar("게시글 작성","");
+    body(`
+      <label>유형</label>
+      <select id="pType"><option value="0">도움 요청 (포인트 지불)</option><option value="1">재능 제공 (포인트 적립)</option></select>
+      <label>제목</label><input id="pTitle" placeholder="무거운 짐 옮기기 도와주세요">
+      <label>카테고리</label>
+      <select id="pCat">${CATEGORIES.map(c=>`<option>${c}</option>`).join("")}</select>
+      <label>상세 내용</label><textarea id="pContent" placeholder="어떤 도움이 필요한지 적어주세요"></textarea>
+      <label>예상 소요 시간 (분)</label>
+      <input id="pTime" type="number" value="60" min="10" step="10" oninput="App.syncPoints()">
+      <label>긴급도 <span style="font-weight:400">(포인트 책정·노출 우선순위에 반영)</span></label>
+      <select id="pUrgency" onchange="App.syncPoints()">
+        <option value="0">낮음</option><option value="1">보통</option><option value="2">긴급</option>
+      </select>
+      <label>제안 포인트 (분)</label>
+      <input id="pPoints" type="number" value="60" min="0" step="10">
+      <div class="note">긴급도가 높을수록 제안 포인트가 자동으로 상향되고, 탐색·매칭에서 더 눈에 띄게 노출됩니다. 값은 직접 수정할 수 있어요.</div>
+      <button class="btn btn-primary" onclick="App.doWrite()">게시글 등록</button>
+    `);
+  },
+
+  browse(){
+    const me = App.me();
+    App.setBar("게시글 탐색","");
+    const f = App.browseFilter || (App.browseFilter = {category:"전체", urgency:"전체"});
+
+    const all = me.searchPost(me.regionName); // 내 지역 글
+    // 필터 적용
+    let results = all.filter(p=>
+      (f.category==="전체" || p.category===f.category) &&
+      (f.urgency==="전체" || p.urgency===parseInt(f.urgency))
+    );
+    // 긴급도 높은 순 정렬(노출 우선순위)
+    results.sort((a,b)=> b.urgency - a.urgency || b.postNo - a.postNo);
+
+    const catOpts = ["전체",...CATEGORIES].map(c=>`<option ${c===f.category?'selected':''}>${c}</option>`).join("");
+    const urgOpts = `<option value="전체" ${f.urgency==="전체"?'selected':''}>전체</option>`+
+      URGENCY.map((u,i)=>`<option value="${i}" ${f.urgency==String(i)?'selected':''}>${u}</option>`).join("");
+
+    const resultList = results.length ? results.map(p=>App.postCard(p,me)).join("")
+      : `<div class="empty">조건에 맞는 게시글이 없어요.</div>`;
+
+    // 추천 게시글: 같은 지역에서 긴급도 높은 순 상위 3개
+    const recommend = all.slice().sort((a,b)=> b.urgency-a.urgency || b.postNo-a.postNo).slice(0,3);
+    const recList = recommend.length ? recommend.map(p=>App.postCard(p,me)).join("") : `<div class="empty">추천할 게시글이 없어요.</div>`;
+
+    body(`
+      <p class="section-title">검색 필터</p>
+      <div style="display:flex;gap:8px">
+        <div style="flex:1"><label style="margin-top:0">카테고리</label><select id="fCat">${catOpts}</select></div>
+        <div style="flex:1"><label style="margin-top:0">긴급도</label><select id="fUrg">${urgOpts}</select></div>
+      </div>
+      <button class="btn btn-primary" onclick="App.doSearch()">🔍 검색</button>
+      <p class="section-title" style="margin-top:22px">검색 결과 (${results.length})</p>${resultList}
+      <p class="section-title" style="margin-top:22px">⭐ 추천 게시글</p>${recList}
+    `);
+  },
+
+  matching(){
+    const me = App.me();
+    App.setBar("실시간 매칭","");
+    if(!me.location){ body(`<div class="empty">먼저 <b>지역 등록</b>에서 내 위치를 설정해야<br>주변 이웃을 찾을 수 있어요.</div>
+      <button class="btn btn-primary" onclick="App.go('region')">지역 등록하러 가기</button>`); return; }
+    const nearby = Matching.findNearbyUser(me, 3.0); // 반경 3km
+    let list = nearby.length ? nearby.map(u=>{
+      const d = me.location.getDistance(u.location);
+      const h = Math.floor(u.showPoint()/60);
+      // 이 이웃이 올린 도움요청 글 중 가장 높은 긴급도를 HELP 마크 색으로 표시
+      const helpPosts = Repo.get().getPosts().filter(p=>p.writerID===u.userID && p.type===0);
+      const maxUrg = helpPosts.length ? Math.max(...helpPosts.map(p=>p.urgency)) : -1;
+      const mark = maxUrg>=0
+        ? `<span style="display:inline-block;width:34px;height:34px;border-radius:50%;background:${URGENCY_COLOR[maxUrg]};color:#fff;font-size:10px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0">HELP</span>`
+        : `<span style="display:inline-block;width:34px;height:34px;border-radius:50%;background:#dfe4e0;color:#9aa6a0;font-size:9px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0">대기</span>`;
+      return `<div class="card"><div class="row" style="margin:0">
+        <div class="avatar">${esc(u.name[0])}</div>
+        <div style="flex:1">
+          <h3>${esc(u.name)}</h3>
+          <div class="meta">📍 ${esc(u.regionName)} · 보유 ${h}시간${maxUrg>=0?` · <b style="color:${URGENCY_COLOR[maxUrg]}">긴급도 ${URGENCY[maxUrg]}</b>`:''}</div>
+        </div>
+        ${mark}
+        <span class="dist">${d<1?Math.round(d*1000)+'m':d.toFixed(1)+'km'}</span>
+      </div>
+      <button class="btn btn-primary btn-sm" style="margin-top:12px" onclick="App.requestMatch('${esc(u.name)}')">매칭 요청 보내기</button>
+      </div>`;
+    }).join("") : `<div class="empty">반경 3km 안에 접속 중인 이웃이 없어요.</div>`;
+    body(`<p class="section-title">📍 ${esc(me.regionName)} · 접속 중인 이웃 ${nearby.length}명</p>
+      <div class="note" style="margin-top:0;margin-bottom:14px">🔴 긴급 · 🟡 보통 · 🟢 낮음 — HELP 마크 색으로 긴급도를 표시합니다.</div>${list}`);
+  },
+
+  settle(){
+    App.setBar("포인트 정산","");
+    const me = App.me();
+    const s = App.pendingSettle;
+    const bal = me.showPoint(), bh = Math.floor(bal/60), bm = bal%60;
+
+    // 1) 보유 포인트 배너 (항상 표시 — 시간 단위)
+    let html = `<div class="balance">
+        <div class="lab">현재 보유 시간 포인트</div>
+        <div class="val">${bh}시간 ${bm}분</div>
+        <div class="sub">⏱️ 모든 거래는 '시간(분)' 단위로 정산됩니다</div>
+      </div>`;
+
+    // 2) 진행 중인 정산이 있으면 확인 카드 + 정산 버튼
+    if(s){
+      const provider = Repo.get().findByUserID(s.providerID);
+      const h = Math.floor(s.amount/60), m = s.amount%60;
+      const enough = bal >= s.amount;
+      const after = bal - s.amount;
+      html += `<p class="section-title">진행 중인 정산</p>
+        <div class="card">
+          <h3>${esc(provider?provider.name:s.providerID)} 님과의 거래</h3>
+          <div class="meta" style="margin-top:8px">제공자(포인트 받음): ${esc(provider?provider.name:s.providerID)}</div>
+          <div class="meta">수혜자(포인트 지불): ${esc(me.name)} (나)</div>
+          <div class="meta">정산 포인트: <b>${h>0?h+'시간 ':''}${m>0?m+'분':''}</b></div>
+          <div class="meta">정산 후 예상 잔액: ${enough?`${Math.floor(after/60)}시간 ${after%60}분`:'<b style="color:var(--danger)">잔액 부족</b>'}</div>
+        </div>
+        <div class="note">정산 시 두 사람의 GPS가 1km 이내였는지 자동 검증해 허위 거래(어뷰징)를 막습니다.</div>
+        <button class="btn btn-primary" onclick="App.doSettle()">⏱️ 정산하고 포인트 이체</button>
+        <button class="btn btn-ghost" onclick="App.pendingSettle=null;render.settle()">정산 취소</button>`;
+    }
+
+    // 3) 거래 내역 (항상 표시)
+    const txs = Repo.get().getTransactions().filter(t=>t.providerID===me.userID || t.receiverID===me.userID);
+    let txList;
+    if(txs.length){
+      txList = txs.slice().reverse().map(t=>{
+        const earned = t.providerID===me.userID; // 내가 제공자면 적립
+        const otherID = earned ? t.receiverID : t.providerID;
+        const other = Repo.get().findByUserID(otherID);
+        const hh = Math.floor(t.amount/60), mm = t.amount%60;
+        const amt = (hh>0?hh+'시간 ':'')+(mm>0?mm+'분':'');
+        return `<div class="card"><div class="row" style="margin:0">
+          <div style="flex:1">
+            <h3 style="font-size:14px">${earned?'포인트 적립 (도움 제공)':'포인트 사용 (도움 받음)'}</h3>
+            <div class="meta">상대: ${esc(other?other.name:otherID)} · ${amt}</div>
+          </div>
+          <span class="dist" style="color:${earned?'var(--primary)':'var(--danger)'};font-size:14px">${earned?'+':'-'}${t.amount}분</span>
+        </div></div>`;
+      }).join("");
+    } else {
+      txList = `<div class="empty">아직 정산 내역이 없어요.<br><b>게시글 탐색 ▸ 매칭 & 정산</b>으로 첫 거래를 해보세요.</div>`;
+    }
+    html += `<p class="section-title" style="margin-top:22px">거래 내역</p>${txList}`;
+
+    if(!s){
+      html += `<button class="btn btn-primary" onclick="App.go('browse')">게시글 보러 가기</button>`;
+    }
+    body(html);
+  },
+
+  report(){
+    App.setBar("신고하기","");
+    const s = App.pendingReport;
+    if(!s){ body(`<div class="empty">신고할 대상이 없어요.</div>`); return; }
+    body(`
+      <p class="section-title">신고 대상</p>
+      <div class="card"><h3>${esc(s.label)}</h3></div>
+      <label>신고 유형</label>
+      <select id="rpCat">
+        <option>욕설·비방</option>
+        <option>허위 재능 등록</option>
+        <option>사기 의심</option>
+        <option>스팸·홍보</option>
+        <option>기타</option>
+      </select>
+      <label>상세 내용</label>
+      <textarea id="rpContent" placeholder="신고 사유를 구체적으로 적어주세요"></textarea>
+      <label>증빙 자료 (선택)</label>
+      <input id="rpFile" type="file" accept="image/*,video/*">
+      <button class="btn btn-danger" onclick="App.doReport()">🚩 신고 제출</button>
+      <button class="btn btn-ghost" onclick="App.back()">취소</button>
+    `);
+  },
+
+  admin(){
+    const admin = App.me();
+    App.setBar("관리자","admin");
+    const users = admin.showUserList().filter(m=>m.role===0);
+    const posts = Repo.get().getPosts();
+    const uList = users.map(u=>`<div class="card"><div class="row" style="margin:0">
+      <div class="avatar">${esc(u.name[0])}</div>
+      <div style="flex:1"><h3>${esc(u.name)}</h3><div class="meta">${esc(u.userID)} · ${u.showPoint()}분 · 📍${esc(u.regionName||'미등록')}</div></div>
+      <button class="btn btn-danger btn-sm" onclick="App.adminDelUser('${u.userID}')">삭제</button>
+    </div>`).join("") || `<div class="empty">사용자가 없습니다.</div>`;
+    const pList = posts.map(p=>`<div class="card"><div class="row" style="margin:0">
+      <div style="flex:1"><h3>${esc(p.title)}</h3><div class="meta">${esc(p.writerID)} · 📍${esc(p.regionName)}</div></div>
+      <button class="btn btn-danger btn-sm" onclick="App.adminDelPost(${p.postNo})">삭제</button>
+    </div>`).join("") || `<div class="empty">게시글이 없습니다.</div>`;
+    const reports = Repo.get().getReports();
+    const rList = reports.map(r=>{
+      const open = r.status==='접수';
+      return `<div class="card">
+        <span class="tag ${open?'help':'give'}">${r.status}</span>
+        <h3>${esc(r.category)}</h3>
+        <div class="meta">대상: ${esc(labelForReport(r))} · 신고자: ${esc(r.reporterID)}</div>
+        <div class="desc">${esc(r.content)}</div>
+        ${open?`<div class="row">
+          <button class="btn btn-danger btn-sm" onclick="App.adminHandleReport(${r.reportNo},'done')">처리(대상 삭제)</button>
+          <button class="btn btn-ghost btn-sm" onclick="App.adminHandleReport(${r.reportNo},'reject')">반려</button>
+        </div>`:''}
+      </div>`;
+    }).join("") || `<div class="empty">접수된 신고가 없습니다.</div>`;
+    body(`
+      <p class="section-title">신고 관리 (${reports.filter(r=>r.status==='접수').length}건 대기)</p>${rList}
+      <p class="section-title" style="margin-top:20px">사용자 관리 (${users.length}명)</p>${uList}
+      <p class="section-title" style="margin-top:20px">게시글 관리 (${posts.length}건)</p>${pList}
+      <button class="btn btn-ghost" onclick="App.logout()">로그아웃</button>
+    `);
+  }
+};
+
+function labelForReport(r){
+  if(r.targetType==='post'){ const p=Repo.get().findPost(r.targetID); return p?('게시글: '+p.title):('게시글 #'+r.targetID+' (삭제됨)'); }
+  const u=Repo.get().findByUserID(r.targetID); return u?('사용자: '+u.name):r.targetID;
+}
+
+/* ---------------- App 동작(핸들러) ---------------- */
+App.doLogin = function(){
+  const id=val("loginId"), pw=val("loginPw");
+  if(!id||!pw){ toast("아이디와 비밀번호를 입력하세요"); return; }
+  if(!this.login.loginCheck(id,pw)){ toast("아이디 또는 비밀번호가 틀렸습니다"); return; }
+  this.reset();
+  if(this.login.isAdministrator()) this.go("admin", false);
+  else this.go("menu", false);
+};
+App.doSignup = function(){
+  const name=val("suName"), id=val("suId"), pw=val("suPw"), tel=val("suTel");
+  if(!name||!id||!pw){ toast("이름·아이디·비밀번호는 필수입니다"); return; }
+  const reg = new Registration(name,id,pw,tel,"");
+  if(!reg.addMember()){ toast("이미 사용 중인 아이디입니다"); return; }
+  toast("가입 완료! 로그인 해주세요");
+  this.back();
+};
+App.useGPS = function(){
+  if(!navigator.geolocation){ toast("이 기기는 GPS를 지원하지 않습니다"); return; }
+  toast("위치를 가져오는 중...");
+  navigator.geolocation.getCurrentPosition(pos=>{
+    const {latitude,longitude} = pos.coords;
+    const name = val("regName") || "내 동네";
+    App.me().registerLocation(latitude, longitude, name);
+    Repo.get().save();
+    toast("현재 위치로 등록되었습니다");
+    render.region();
+  }, err=>{ toast("위치 권한이 거부되었어요. 지역 이름으로 등록하세요"); }, {enableHighAccuracy:true, timeout:8000});
+};
+App.saveRegionManual = function(){
+  const name = val("regName");
+  if(!name){ toast("지역 이름을 입력하세요"); return; }
+  const me = App.me();
+  // 좌표가 없으면 대구 중구 기준 좌표를 기본값으로 사용(매칭 데모 가능하게)
+  const lat = me.location?me.location.latitude:35.8714, lng = me.location?me.location.longitude:128.6014;
+  me.registerLocation(lat, lng, name);
+  Repo.get().save();
+  toast("지역이 등록되었습니다");
+  this.go("menu", false);
+};
+App.doWrite = function(){
+  const me = App.me();
+  if(!me.regionName){ toast("먼저 지역을 등록해주세요"); this.go("region"); return; }
+  const title=val("pTitle"), content=val("pContent");
+  const time=parseInt(val("pTime"))||60, type=parseInt(val("pType"));
+  const category=val("pCat"), urgency=parseInt(val("pUrgency"))||0;
+  const points=parseInt(val("pPoints")); const pts=isNaN(points)?time:points;
+  if(!title){ toast("제목을 입력하세요"); return; }
+  me.writePost(type, title, content, time, category, urgency, pts);
+  Repo.get().save();
+  toast("게시글이 등록되었습니다");
+  this.go("browse", false);
+};
+App.syncPoints = function(){
+  const t = parseInt($('pTime').value)||0;
+  const u = parseInt($('pUrgency').value)||0;
+  const bonus = [0,10,30][u] || 0; // 긴급도 가산 포인트
+  $('pPoints').value = t + bonus;
+};
+App.doSearch = function(){
+  this.browseFilter = { category: val('fCat'), urgency: val('fUrg') };
+  render.browse();
+};
+// 게시글 카드(검색 결과·추천 공용)
+App.postCard = function(p, me){
+  const writer = Repo.get().findByUserID(p.writerID);
+  const tag = p.type===1?`<span class="tag give">재능 제공</span>`:`<span class="tag help">도움 요청</span>`;
+  const mine = p.writerID===me.userID;
+  return `<div class="card">${tag} ${urgencyBadge(p.urgency)}
+    <h3>${esc(p.title)}</h3>
+    <div class="meta">${esc(writer?writer.name:p.writerID)} · ${esc(p.category)} · ⏱${p.requiredTime}분 · 💰${p.points}분 · 📍${esc(p.regionName)}</div>
+    <div class="desc">${esc(p.content)}</div>
+    <div class="row">
+      ${mine?`<span class="meta">내가 쓴 글</span>`
+            :`<button class="btn btn-primary btn-sm" onclick="App.startSettle('${p.writerID}',${p.postNo})">매칭 & 정산</button>
+              <button class="btn btn-ghost btn-sm" onclick="App.startReport('post',${p.postNo})">🚩 신고</button>`}
+    </div></div>`;
+};
+App.requestMatch = function(name){ toast(name+"님께 매칭 요청을 보냈어요 🤝"); };
+App.startSettle = function(providerID, postNo){
+  const p = Repo.get().findPost(postNo);
+  const amount = p ? p.points : 60;
+  this.pendingSettle = {providerID, amount, postNo};
+  this.go("settle");
+};
+App.doSettle = function(){
+  const s = this.pendingSettle, me = this.me();
+  const tx = new Transaction(s.providerID, me.userID, s.amount);
+  const res = tx.confirmComplete();
+  if(!res.ok){ toast("정산 실패: "+res.reason); return; }
+  this.pendingSettle = null;
+  toast("정산 완료! 포인트가 이체되었습니다 ✅");
+  render.settle();
+};
+App.adminDelUser = function(id){ this.me().deleteUser(id); toast("사용자를 삭제했습니다"); render.admin(); };
+App.adminDelPost = function(no){ this.me().managePost(no); toast("게시글을 삭제했습니다"); render.admin(); };
+
+App.startReport = function(targetType, targetID){
+  let label = targetID;
+  if(targetType==='post'){ const p=Repo.get().findPost(targetID); label = p?('게시글: '+p.title):('게시글 #'+targetID); }
+  else { const u=Repo.get().findByUserID(targetID); label = u?('사용자: '+u.name):targetID; }
+  this.pendingReport = {targetType, targetID, label};
+  this.go('report');
+};
+App.doReport = function(){
+  const cat = val('rpCat'), content = val('rpContent');
+  if(!content){ toast("신고 상세 내용을 입력하세요"); return; }
+  const me = this.me(), s = this.pendingReport;
+  const r = new Report(Repo.get().nextReportNo(), me.userID, s.targetType, s.targetID, cat, content);
+  Repo.get().addReport(r);
+  this.pendingReport = null;
+  toast("신고가 접수되었습니다");
+  this.back();
+};
+App.adminHandleReport = function(no, action){
+  this.me().handleReport(no, action);
+  toast(action==='done' ? "신고 처리 완료 (대상 제재)" : "신고를 반려했습니다");
+  render.admin();
+};
+
+/* ---------------- 시작 ---------------- */
+Repo.get(); // 저장소 초기화(+시드)
+App.current = "login";
+render.login();
+</script>
+</body>
+</html>
